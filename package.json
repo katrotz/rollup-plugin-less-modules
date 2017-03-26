@@ -1,0 +1,24 @@
+{
+  "name": "rollup-plugin-lessjs",
+  "version": "0.1.0",
+  "description": "The rollup plugin that compiles LESS files into CSS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katrotz/rollup-plugin-lessjs.git"
+  },
+  "keywords": [
+    "rollup",
+    "less",
+    "css"
+  ],
+  "author": "Vyacheslav Cotruta <katrotz@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/katrotz/rollup-plugin-lessjs/issues"
+  },
+  "homepage": "https://github.com/katrotz/rollup-plugin-lessjs#readme"
+}
