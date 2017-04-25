@@ -1,24 +1,49 @@
 {
-  "name": "rollup-plugin-lessjs",
+  "name": "rollup-plugin-less-modules",
   "version": "0.1.0",
-  "description": "The rollup plugin that compiles LESS files into CSS",
-  "main": "index.js",
+  "description": "The rollup plugin that compiles imported LESS files into CSS",
+  "main": "dist/rollup-plugin-less-modules.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "npm run test",
+    "pretest": "npm run build",
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "ava"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/katrotz/rollup-plugin-lessjs.git"
+    "url": "git+https://github.com/katrotz/rollup-plugin-less-modules.git"
   },
   "keywords": [
-    "rollup",
+    "rollup-plugin",
     "less",
     "css"
   ],
   "author": "Vyacheslav Cotruta <katrotz@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/katrotz/rollup-plugin-lessjs/issues"
+    "url": "https://github.com/katrotz/rollup-plugin-less-modules/issues"
   },
-  "homepage": "https://github.com/katrotz/rollup-plugin-lessjs#readme"
+  "homepage": "https://github.com/katrotz/rollup-plugin-less-modules#readme",
+  "peerDependencies": {
+    "postcss": "^5.2.x"
+  },
+  "devDependencies": {
+    "autoprefixer": "^6.7.7",
+    "ava": "^0.18.2",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-preset-es2015": "^6.24.1",
+    "postcss": "^5.2.16",
+    "rollup": "^0.41.6",
+    "rollup-plugin-babel": "^2.7.1"
+  },
+  "dependencies": {
+    "clean-css": "^4.0.12",
+    "fs-extra": "^2.1.2",
+    "less": "^2.7.2",
+    "rollup-pluginutils": "^2.0.1",
+    "source-map": "^0.5.6"
+  }
 }
