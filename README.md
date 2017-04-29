@@ -1,7 +1,7 @@
 # rollup-plugin-less-modules
 [![Build Status](https://travis-ci.org/katrotz/rollup-plugin-less-modules.svg)](https://travis-ci.org/katrotz/rollup-plugin-less-modules)
 
-The rollup less modules plugin compiles the LESS files into CSS before importing them into ES modules.
+The [rollup](https://github.com/rollup/rollup) less modules plugin compiles the LESS files into CSS before importing them into ES modules.
 A use case would be an [Angular](https://github.com/angular/angular) application that defines the styles at the component level, or any other component based application that implements styles encapsulation.
 
 Why is it awesome?
