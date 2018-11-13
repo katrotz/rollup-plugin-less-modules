@@ -8,7 +8,7 @@
     "release": "npm version --force patch -m \"Version %s release\" && npm publish",
     "preversion": "npm test",
     "version": "npm run build && git add dist --force",
-    "postversion": "git push --tags",
+    "postversion": "git push --tags && git reset --hard",
     "pretest": "npm run build",
     "build": "rollup -c",
     "watch": "rollup -c -w",
