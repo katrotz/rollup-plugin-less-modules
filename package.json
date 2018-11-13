@@ -5,7 +5,7 @@
   "main": "dist/rollup-plugin-less-modules.js",
   "module": "src/index.js",
   "scripts": {
-    "release": "npm version -f patch -m \"Version %s release\" && npm publish",
+    "release": "npm version --force patch -m \"Version %s release\" && npm publish",
     "preversion": "npm test",
     "version": "npm run build",
     "postversion": "git push --tags",
