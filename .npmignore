@@ -2,3 +2,5 @@ test
 rollup.config.js
 .travis.yml
 .babelrc
+.idea
+.vscode
