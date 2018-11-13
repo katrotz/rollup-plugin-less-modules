@@ -1,5 +1,5 @@
 import { createFilter } from 'rollup-pluginutils';
-import { dirname, relative, extname, basename, join } from 'path'
+import { dirname, relative, extname, basename, join, sep } from 'path'
 import { ensureFileSync, writeFileSync } from 'fs-extra';
 import less from 'less';
 import CleanCSS from 'clean-css';
@@ -117,7 +117,7 @@ export default function(iOptions = {}) {
 
         // Generate the es-module dependencies based on the less imports to allow rollup watch detect changes in the dependent files
         // The proper rollup API fix for this behaviour still pending {@link https://github.com/rollup/rollup/issues/1203}
-        const codeImports = dependencies.reduce((src, importee) => `${src}import "./${importee}";\n`, '');
+        const codeImports = dependencies.reduce((src, importee) => `${src}import ".${sep + importee}";\n`, '');
 
         const codeExports = `export default ${JSON.stringify(styles)};\nexport const sourceMap = ${JSON.stringify(map)};`;
 
