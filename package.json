@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-less-modules",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "The rollup plugin that compiles imported LESS files into CSS",
   "main": "dist/rollup-plugin-less-modules.js",
   "module": "src/index.js",
