@@ -43,3 +43,6 @@ test/.output/
 dist/
 
 package-lock.json
+
+.idea
+.vscode
