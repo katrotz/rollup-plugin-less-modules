@@ -5,27 +5,34 @@ import less from 'less';
 import CleanCSS from 'clean-css';
 
 const cwd = process.cwd();
+const SOURCEMAP_INLINE = 'inline';
 
 /**
  * Rollup plugin less modules provides the ability to import less content directly into the es module
- * @param {Object} iOptions The plugin options
- * @param {boolean|string|Function} iOptions.output Should the compiled styles be bundled together to a separate css file (default false)
- * @param {boolean} iOptions.minify Controls the minification of the resulting CSS content (default false)
- * @param {Function} iOptions.processor A callback function that when provided will be invoked with compiled CSS to perform additional transformations before the generate phase (default null)
- * @param {Object} iOptions.options The options to be provided to LESS while rendering the less files (default {})
- * @returns {*}
+ * @param {Object} options The plugin options
+ * @param {(boolean|string)=} options.output Should the compiled styles be bundled to a separate css file, can be used to override the destination file path
+ * @param {(boolean|string)=} options.sourcemap If true, a separate sourcemap file will be created. If inline, the sourcemap will be appended to the resulting output file as a data URI
+ * @param {boolean=} options.minify Controls the minification of the resulting CSS content
+ * @param {Function=} options.processor A callback function that when provided will be invoked with compiled CSS to perform additional transformations before the generate phase
+ * @param {Object=} options.options The options to be provided to LESS while rendering the less files
+ * @returns {Object}
  */
-export default function(iOptions = {}) {
-    const options = Object.assign({
+export default function(options = {}) {
+    const pluginOptions = Object.assign({
         output: false,
+        sourcemap: true,
         minify: false,
         processor: null,
         options: {}
-    }, iOptions);
+    }, options);
 
-    let inlineTransformedSourceMaps = false;
+    const generateSourceMaps = !!pluginOptions.sourcemap;
 
-    const filter = createFilter(options.include || [ '**/*.less', '**/*.css' ], options.exclude || 'node_modules/**');
+    const inlineSourceMaps = pluginOptions.sourcemap === SOURCEMAP_INLINE;
+
+    const filter = createFilter(pluginOptions.include || [ '**/*.less', '**/*.css' ], pluginOptions.exclude || 'node_modules/**');
+
+    let rollupInput = null;
 
     /**
      * A hash of compiled styles
@@ -57,7 +64,7 @@ export default function(iOptions = {}) {
     const lessRender = (source, filename) => {
         const paths = Array.from(pathsSet);
 
-        return less.render(source, Object.assign({ paths, filename, sourceMap: {} }, options.options));
+        return less.render(source, Object.assign({ paths, filename, sourceMap: {} }, pluginOptions.options));
     };
 
     /**
@@ -82,12 +89,12 @@ export default function(iOptions = {}) {
      */
     const doPostProcess = async (iOutput, id) => {
         let output = iOutput;
-        let processedOutput = (typeof options.processor === 'function') ? await options.processor(iOutput, id) : iOutput;
+        let processedOutput = (typeof pluginOptions.processor === 'function') ? await pluginOptions.processor(iOutput, id) : iOutput;
 
         if (processedOutput.css && processedOutput.map) {
             output = processedOutput;
         } else {
-            this.warn('Rollup less modules plugin skipped processor output due to an invalid return value');
+            this.warn('Rollup less modules plugin ignored processor output due to an invalid return value');
         }
 
         return output;
@@ -105,7 +112,7 @@ export default function(iOptions = {}) {
         let styles = output.css;
 
         // Inlines the source-maps into the styles exported as es-module
-        if (inlineTransformedSourceMaps) {
+        if (inlineSourceMaps) {
             styles = `${styles}\n${getInlineSourceMapContent(map)}`
         }
 
@@ -115,6 +122,7 @@ export default function(iOptions = {}) {
                 basename(importee)
             ));
 
+        // TODO check for new rollup API addWatchFile
         // Generate the es-module dependencies based on the less imports to allow rollup watch detect changes in the dependent files
         // The proper rollup API fix for this behaviour still pending {@link https://github.com/rollup/rollup/issues/1203}
         const codeImports = dependencies.reduce((src, importee) => `${src}import ".${sep + importee}";\n`, '');
@@ -140,7 +148,7 @@ export default function(iOptions = {}) {
         output.map = output.map ? JSON.parse(output.map) : output.map;
 
         // Minify
-        if (options.minify) {
+        if (pluginOptions.minify) {
             let minifySources = {
                 [id]: {styles: output.css, sourceMap: output.map}
             };
@@ -149,7 +157,7 @@ export default function(iOptions = {}) {
         }
 
         // Post processing
-        if (options.processor) {
+        if (pluginOptions.processor) {
             output = await doPostProcess(output, id);
         }
 
@@ -163,30 +171,36 @@ export default function(iOptions = {}) {
      */
     const getInlineSourceMapContent = (sourceMap) => {
         const sStringMap = (typeof sourceMap === 'string') ? sourceMap : JSON.stringify(sourceMap);
-        let smBase64 = (new Buffer(sStringMap)).toString('base64');
+        let smBase64 = (Buffer.from(sStringMap)).toString('base64');
         return `/*# sourceMappingURL=data:application/json;base64,${smBase64} */`;
     };
 
+    const resolveCssBundlePath = (outputOptions) => {
+        const outputBundleFile = outputOptions.file;
+        const outputBundleDir = outputOptions.dir;
+        const inputFileName = basename(rollupInput);
+
+        // Uses this plugin override CSS bundle path if provided
+        if (typeof pluginOptions.output === 'string') {
+            return pluginOptions.output;
+        }
+
+        // Write the CSS file in the same path as the bundle file
+        if (outputBundleFile) {
+            return toFileExtension(outputBundleFile, '.css');
+        }
+
+        // Output the CSS file to the configured multi chunk directory using the input file name
+        return toFileExtension(join(outputBundleDir, inputFileName), '.css');
+    };
+
     return {
-        /**
-         * The name of the plugin, for use in error messages and warnings
-         */
         name: 'less-modules',
 
-        /**
-         * A function that replaces or manipulates the options object passed to rollup.rollup
-         * @param o
-         */
-        options: (o) => {
-            inlineTransformedSourceMaps = (o.sourceMap === 'inline');
+        options(inputOptions) {
+            rollupInput = inputOptions.input || this.warn('Expecting entry file to be defined on the InputOptions#input');
         },
 
-        /**
-         * A source, id => code or source, id => { code, map } module transformer function
-         * @param source
-         * @param id
-         * @returns {{code: null, map: {mappings: string}}|null}
-         */
         async transform(source, id) {
             if (!filter(id)) {
                 return null;
@@ -205,68 +219,53 @@ export default function(iOptions = {}) {
             };
         },
 
-        async ongenerate(generateOptions, bundleObject) {
-            inlineTransformedSourceMaps = (generateOptions.sourceMap === 'inline');
-        },
+        async generateBundle(outputOptions, bundleObject, isWrite) {
+            const destinationFile = outputOptions.file;
+            const destinationDir = outputOptions.dir;
 
-        /**
-         * Function hook called when bundle.write() is being executed, after the file has been written to disk.
-         * Receives .write() options along with the underlying Bundle
-         * @param {Object} writeOptions
-         * @param {Object} bundleObject
-         * @returns {Promise.<void>}
-         */
-        async onwrite(writeOptions, bundleObject) {
-            const generateSourceMaps = writeOptions.sourceMap;
-            const inlineSourceMaps = (writeOptions.sourceMap === 'inline');
+            if (isWrite && pluginOptions.output && (destinationFile || destinationDir)) {
+                let cssBundlePath = resolveCssBundlePath(outputOptions);
+                let lessBundlePath = toFileExtension(cssBundlePath, '.less');
+                let cssMapsBundlePath = `${cssBundlePath}.map`;
 
-            const dest = writeOptions.dest;
-
-            if (!options.output || !dest) {
-                return;
-            }
-
-            let cssBundlePath = (typeof options.output === 'string') ? options.output : toFileExtension(dest, '.css');
-            let lessBundlePath = toFileExtension(cssBundlePath, '.less');
-            let cssMapsBundlePath = `${cssBundlePath}.map`;
-
-            if (!cssBundlePath) {
-                return;
-            }
-
-            try {
-                ensureFileSync(cssBundlePath);
-            } catch (err) {
-                this.warn(err);
-                return;
-            }
-
-            // Generate a less file that imports all the required less modules in the bundle
-            const lessSources = Object.keys(styles).reduce((src, id) => `${src}\n@import '${relative(dirname(lessBundlePath), id)}';`, '');
-
-            // Transform the generated less file using same workflow as for the bundle imported less modules
-            const transformOutput = await transform(lessSources, lessBundlePath);
-
-            let cssBundleContent = `${transformOutput.css}`;
-
-            const cssBundleSourceMaps = transformOutput.map;
-
-            if (generateSourceMaps) {
-                if (inlineSourceMaps) {
-                    cssBundleContent += `\n${getInlineSourceMapContent(cssBundleSourceMaps)}`;
-                } else {
-                    cssBundleContent += `\n/*# sourceMappingURL=${basename(cssMapsBundlePath)} */`;
-
-                    // Write the source-map file
-                    writeFileSync(`${cssMapsBundlePath}`, JSON.stringify(cssBundleSourceMaps), 'utf8');
+                if (!cssBundlePath) {
+                    return;
                 }
+
+                try {
+                    ensureFileSync(cssBundlePath);
+                } catch (error) {
+                    this.error(error);
+                    return;
+                }
+
+                // Generate a less file that imports all the required less modules in the bundle
+                const lessSources = Object.keys(styles).reduce((src, id) => `${src ? src + '\n' : src}@import '${relative(dirname(lessBundlePath), id)}';`, '');
+
+                // Transform the generated less file using same workflow as for the bundle imported less modules
+                const transformOutput = await transform(lessSources, lessBundlePath);
+
+                let cssBundleContent = `${transformOutput.css}`;
+
+                const cssBundleSourceMaps = transformOutput.map;
+
+                if (generateSourceMaps) {
+                    if (inlineSourceMaps) {
+                        cssBundleContent += `\n${getInlineSourceMapContent(cssBundleSourceMaps)}`;
+                    } else {
+                        cssBundleContent += `\n/*# sourceMappingURL=${basename(cssMapsBundlePath)} */`;
+
+                        // Write the source-map file
+                        writeFileSync(`${cssMapsBundlePath}`, JSON.stringify(cssBundleSourceMaps), 'utf8');
+                    }
+                }
+
+                // Write the LESS file used to generate the bundle CSS
+                writeFileSync(lessBundlePath, lessSources, 'utf8');
+
+                // Write the CSS bundle file
+                writeFileSync(cssBundlePath, cssBundleContent, 'utf8');
             }
-
-            // Write the LESS file used to generate the bundle CSS
-            writeFileSync(lessBundlePath, lessSources, 'utf8');
-
-            // Write the CSS bundle file
-            writeFileSync(cssBundlePath, cssBundleContent, 'utf8');
         }
     }
 };

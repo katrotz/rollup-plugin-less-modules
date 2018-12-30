@@ -5,7 +5,7 @@ The [rollup](https://github.com/rollup/rollup) less modules plugin compiles the 
 A use case would be an [Angular](https://github.com/angular/angular) application that defines the styles at the component level, or any other component based application that implements styles encapsulation.
 
 Why is it awesome?
-+ It can bundle all the imported less files and output the css content into a separate bundle file
++ It can collect and bundle all the imported less files and output the CSS content into a separate CSS bundle file
 + It plays nicely with the source maps. Source maps can be imported into ES module, can be exported to a separate file and can be inlined into the CSS content (for both imported into ES module or exported to file). 
 + It automagically detects the changes in the dependent less files and recompiles the bundle when rollup is run in watch mode 
 
@@ -55,11 +55,13 @@ import style, { sourceMap } from './index.less';
 
 # Options
 
-**NOTE** In addition to the plugin options that are listed below, `less-modules` makes use of the rollup options like `sourceMap` (true|false|'inline') and `dest` to figure out the default destination for the CSS bundle.
-
 ### minify
 + **Description** Minifies the compiled styles using [clean-css](https://github.com/jakubpawlowicz/clean-css)
 + **Default** `false`
+
+### sourcemap
++ **Description** Controls the generation of source maps for the compiled Less files. Follows the rollup pattern for ES modules (true|false|'inline') to output into a separate map file or inline the source maps into the generated CSS file.
++ **Default** `true`
 
 ### options
 + **Description** Defines the options passed to [Less.js compiler](https://github.com/less/less.js). See below the *Source maps* section for more details of how to configure this option to get correct paths in the source maps.
@@ -72,7 +74,7 @@ import style, { sourceMap } from './index.less';
     // The relative path from the repository root to the file
     filename: String,
 
-    // The source-map configuration for [LESS](http://lesscss.org/usage/#programmatic-usage)
+    // The source map configuration for [LESS](http://lesscss.org/usage/#programmatic-usage)
     sourceMap: {}
 }
 ```
@@ -121,14 +123,16 @@ return rollup({
 + **Example**
 ```
 return rollup({
-    entry: 'index.js',
-    dest: 'dist/app.js'
+    input: 'index.js',
+    output: {
+        file: 'dist/app.js'
+    },
     plugins: [
         lessModules({
             // Does not output the styles to an external file
             // output: false,
 
-            // Outputs the styles to a separate bundle file with the same name as the dest of the bundle.
+            // Outputs the styles to a separate bundle file with the same name as the input file name of the bundle.
             // output: true,
 
             // Outputs the bundled styles to a custom path
@@ -139,14 +143,14 @@ return rollup({
 ```
 
 # Source maps
-The plugin provides means to configure and use the source maps. The source-maps are provided only when the rollup is run with the [*sourceMap*](https://github.com/rollup/rollup/wiki/JavaScript-API#sourcemap-1) option enabled.
+The plugin provides means to configure and use the source maps. The source maps are provided only when the plugin is run with the `sourcemap` option enabled.
 
-The source-maps can be accessed in the ES module. Eg. 
+The source maps can be accessed in the ES module. Eg. 
 `import { sourceMap } from 'path-to-styles.less'`
 
-When the source-maps are configured to be inlined, the content is embedded into the CSS content as a base64 string
+When the source maps are configured to be inlined, the content is embedded into the CSS content as a base64 string
 
-By default the source-map paths to the original files are relative to the package root path (eg. `src/components/component/less/styles.less`)
+By default the source map paths to the original files are relative to the package root path (eg. `src/components/component/less/styles.less`)
 To make the paths look like `/components/component/less/styles.less`, following less configuration required
 
 ```
