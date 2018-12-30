@@ -1,15 +1,12 @@
 {
   "plugins": [
-    "external-helpers",
-    "transform-async-to-generator",
-    "transform-runtime"
+    "@babel/plugin-external-helpers",
+    "@babel/plugin-transform-async-to-generator",
+    "@babel/plugin-transform-runtime"
   ],
   "presets": [
     [
-      "es2015",
-      {
-        "modules": false
-      }
+      "@babel/env"
     ]
   ]
 }
