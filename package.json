@@ -29,6 +29,11 @@
     "url": "https://github.com/katrotz/rollup-plugin-less-modules/issues"
   },
   "homepage": "https://github.com/katrotz/rollup-plugin-less-modules#readme",
+  "browserslist": [
+    "last 1 version",
+    "> 1%",
+    "IE 10"
+  ],
   "peerDependencies": {
     "postcss": "^5.2.x"
   },
