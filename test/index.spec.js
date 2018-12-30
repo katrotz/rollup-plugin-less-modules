@@ -13,94 +13,66 @@ test.before(t => {
     removeSync(temporaryPath);
 });
 
-test('should compile and import basic less files', t => {
-    return rollup({
-        entry: 'test/fixtures/basic/index.js',
-        plugins: [
-            lessModules()
-        ]
-    })
-    
-    .then(bundle => bundle.generate({ format: 'es' }).code)
-
-    .then(code => {
-        t.true(code.indexOf('body') >= 0);
-    })
-    
-    .catch(error => t.fail(`${error}`));
-});
-
-test('should compile and import less files with imports', t => {
-    return rollup({
-        entry: 'test/fixtures/less-import/index.js',
-        plugins: [
-            lessModules()
-        ]
-    })
-
-    .then(bundle => bundle.generate({ format: 'es' }).code)
-    
-    .then(code => {
-        t.true(code.indexOf('body') >= 0);
-    })
-    
-    .catch(error => t.fail(`${error}`));
-});
-
-test('should compile and post-process the styles', t => {
-    const options = {
-        sourceMap: {}
+test('should compile and import basic less files', async t => {
+    const pluginOpts = {};
+    const rollupInputOpts = {
+        input: 'test/fixtures/basic/index.js',
+        plugins: [ lessModules(pluginOpts) ]
     };
+    const rollupOutputOpts = { format: 'es' };
 
-    const processor = function(tCode, id) {
-        const postCssOptions = {
-            from: id,
-            to: id,
-            map: {
-                prev: tCode.map
-            }
-        };
-        return postcss([autoprefixer])
-            .process(tCode.css, postCssOptions)
-            .then(result => ({
-                css: result.css,
-                map: result.map.toString()
-            }))
-    };
+    const bundle = await rollup(rollupInputOpts);
+    const { output } = await bundle.generate(rollupOutputOpts);
 
-    return rollup({
-        entry: 'test/fixtures/post-process/index.js',
-        plugins: [
-            lessModules({options, processor})
-        ]
-    })
-
-    .then(bundle => bundle.generate({ format: 'es' }).code)
-
-    .then(code => {
-        t.true(code.indexOf('-ms-flexbox') >= 0);
-    })
-    
-    .catch(error => t.fail(`${error}`))
+    t.true(output[0].code.indexOf('body') >= 0);
 });
 
-test('should clean and minify the compiled CSS content', t => {
-    const lessOptions = {};
+test('should compile and import less files with imports', async t => {
+    const pluginOpts = {};
+    const rollupInputOpts = {
+        input: 'test/fixtures/less-import/index.js',
+        plugins: [ lessModules(pluginOpts) ]
+    };
+    const rollupOutputOpts = { format: 'es' };
 
-    return rollup({
-        entry: 'test/fixtures/minify/index.js',
-        plugins: [
-            lessModules({
-                minify: true
-            })
-        ]
-    })
+    const bundle = await rollup(rollupInputOpts);
+    const { output } = await bundle.generate(rollupOutputOpts);
 
-    .then(bundle => bundle.generate({ format: 'es' }).code)
+    t.true(output[0].code.indexOf('body') >= 0);
+});
 
-    .then(code => {
-        t.true(code.indexOf('body{margin:0}') > 0)
-    })
+test('should compile and post-process the styles', async t => {
+    const pluginOpts = {
+        options: { sourceMap: {} },
+        processor: async function(tCode, id) {
+            const postCssOptions = { from: id, to: id, map: { prev: tCode.map } };
+            const result = await postcss([autoprefixer]).process(tCode.css, postCssOptions);
 
-    .catch(error => t.fail(`${error}`))
+            return { css: result.css, map: result.map.toString() }
+        }
+    };
+    const rollupInputOpts = {
+        input: 'test/fixtures/post-process/index.js',
+        plugins: [ lessModules(pluginOpts) ]
+    };
+    const rollupOutputOpts = { format: 'es' };
+
+    const bundle = await rollup(rollupInputOpts);
+    const { output } = await bundle.generate(rollupOutputOpts);
+
+    t.true(output[0].code.indexOf('-ms-flexbox') >= 0);
+});
+
+test('should clean and minify the compiled CSS content', async t => {
+    const pluginOpts = { minify: true };
+    const rollupInputOpts = {
+        input: 'test/fixtures/minify/index.js',
+        plugins: [ lessModules(pluginOpts) ]
+    };
+    const rollupOutputOpts = { format: 'es' };
+
+    const bundle = await rollup(rollupInputOpts);
+    const { output } = await bundle.generate(rollupOutputOpts);
+
+    t.true(output[0].code.indexOf('body{margin:0}') > 0);
 });
